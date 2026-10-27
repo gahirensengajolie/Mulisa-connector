@@ -1,0 +1,6 @@
+# Runtime dependencies. Ranges, not pins: run `make lock` to freeze exact versions into requirements.lock.
+fastapi>=0.115
+uvicorn>=0.30
+sqlalchemy>=2.0
+pydantic>=2.7
+pydantic-settings>=2.3

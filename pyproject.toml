@@ -1,0 +1,53 @@
+[project]
+name = "mulisa-connector"
+version = "1.0.0"
+description = "Track C: greenbank -> Mulisa transaction-screening connector (FastAPI, SQLAlchemy, SQLite)"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [".venv", "data"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort (import order)
+    "B",        # bugbear (likely bugs)
+    "UP",       # pyupgrade
+    "S",        # bandit (security)
+    "SIM",      # simplifications
+    "C4",       # comprehensions
+    "RUF",      # ruff-specific
+]
+ignore = ["E501"]  # line length is the formatter's job
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]   # asserts and fake keys are normal in tests
+"mock_mulisa/**" = ["S104", "S311", "UP"]  # a throwaway local mock, not production code
+"app/services/mulisa_client.py" = ["S310"]  # URL scheme is validated in Settings (https, or http on localhost)
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "mock_mulisa", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = false
+plugins = ["pydantic.mypy"]
+exclude = ["^mock_mulisa/", "^tests/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --cov=app --cov-report=term-missing"
+
+[tool.coverage.run]
+branch = true

@@ -1,0 +1,43 @@
+{
+  "_comment": "Synthetic data only: fictional people, numbers and payments.",
+  "cleared": {
+    "reference": "GB-PAY-20261014-0042",
+    "amount": "250000",
+    "currency": "RWF",
+    "debtor": { "msisdn": "250788000111", "name": "Aline Uwase", "wallet": "GB-0001" },
+    "creditor": { "msisdn": "250722000333", "name": "Eric Mugisha", "provider": "bluemobile" },
+    "createdAt": "2026-10-14T16:40:00Z"
+  },
+  "flagged_high_value": {
+    "reference": "GB-PAY-20261014-0043",
+    "amount": "1500000",
+    "currency": "RWF",
+    "debtor": { "msisdn": "250788000111", "name": "Aline Uwase", "wallet": "GB-0001" },
+    "creditor": { "msisdn": "250722000333", "name": "Eric Mugisha", "provider": "bluemobile" },
+    "createdAt": "2026-10-14T16:45:00Z"
+  },
+  "flagged_blacklisted_wallet": {
+    "reference": "GB-PAY-20261014-0044",
+    "amount": "20000",
+    "currency": "RWF",
+    "debtor": { "msisdn": "250788000111", "name": "Aline Uwase", "wallet": "GB-0001" },
+    "creditor": { "msisdn": "250722000999", "name": "Test Blacklisted", "provider": "bluemobile" },
+    "createdAt": "2026-10-14T16:50:00Z"
+  },
+  "kes_two_decimals": {
+    "reference": "GB-PAY-20261014-0045",
+    "amount": "1250.50",
+    "currency": "KES",
+    "debtor": { "msisdn": "250788000111", "name": "Aline Uwase", "wallet": "GB-0001" },
+    "creditor": { "msisdn": "254712000555", "name": "Wanjiru Test", "provider": "bluemobile" },
+    "createdAt": "2026-10-14T17:00:00Z"
+  },
+  "malformed_amount_is_a_float": {
+    "reference": "GB-PAY-20261014-0046",
+    "amount": 250000.5,
+    "currency": "RWF",
+    "debtor": { "msisdn": "250788000111", "name": "Aline Uwase", "wallet": "GB-0001" },
+    "creditor": { "msisdn": "250722000333", "name": "Eric Mugisha", "provider": "bluemobile" },
+    "createdAt": "2026-10-14T17:10:00Z"
+  }
+}
