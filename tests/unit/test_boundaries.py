@@ -39,15 +39,11 @@ def party(**fields: str) -> dict[str, str]:
 
 
 class TestFieldLengthBoundaries:
-    @pytest.mark.parametrize(
-        ("size", "ok"), [(1, True), (64, True), (0, False), (65, False)]
-    )
+    @pytest.mark.parametrize(("size", "ok"), [(1, True), (64, True), (0, False), (65, False)])
     def test_reference_length(self, size: int, ok: bool) -> None:
         assert valid(reference="A" * size) is ok
 
-    @pytest.mark.parametrize(
-        ("digits", "ok"), [(8, True), (15, True), (7, False), (16, False)]
-    )
+    @pytest.mark.parametrize(("digits", "ok"), [(8, True), (15, True), (7, False), (16, False)])
     def test_msisdn_digits(self, digits: int, ok: bool) -> None:
         assert valid(debtor=party(msisdn="2" * digits)) is ok
 
@@ -74,12 +70,8 @@ class TestAmountBoundaries:
             to_minor_units("90071992547409.92", "KES")
         assert caught.value.code == "amount_too_large"
 
-    @pytest.mark.parametrize(
-        ("amount", "code"), [("9" * 15, None), ("9" * 16, "invalid_amount")]
-    )
-    def test_fifteen_whole_digits_pass_sixteen_fail(
-        self, amount: str, code: str | None
-    ) -> None:
+    @pytest.mark.parametrize(("amount", "code"), [("9" * 15, None), ("9" * 16, "invalid_amount")])
+    def test_fifteen_whole_digits_pass_sixteen_fail(self, amount: str, code: str | None) -> None:
         if code is None:
             assert to_minor_units(amount, "RWF") == int(amount)
         else:
@@ -141,9 +133,7 @@ class TestFutureTimestampBoundary:
 
     def test_exactly_now_plus_skew_is_accepted(self) -> None:
         assert (
-            self.screen(
-                make_service(300, FakeScreener()), "2026-10-22T09:05:00Z"
-            ).decision
+            self.screen(make_service(300, FakeScreener()), "2026-10-22T09:05:00Z").decision
             == "cleared"
         )
 
@@ -152,10 +142,7 @@ class TestFutureTimestampBoundary:
         with pytest.raises(ApiError) as caught:
             self.screen(make_service(300, screener), "2026-10-22T09:05:01Z")
         assert caught.value.status_code == 422
-        assert (
-            caught.value.details
-            and caught.value.details[0]["code"] == "timestamp_in_future"
-        )
+        assert caught.value.details and caught.value.details[0]["code"] == "timestamp_in_future"
         assert screener.calls == 0
 
     def test_with_zero_skew_now_passes_and_one_second_later_fails(self) -> None:
@@ -166,9 +153,7 @@ class TestFutureTimestampBoundary:
 
     def test_an_old_payment_is_fine(self) -> None:
         assert (
-            self.screen(
-                make_service(300, FakeScreener()), "2020-01-01T00:00:00Z"
-            ).decision
+            self.screen(make_service(300, FakeScreener()), "2020-01-01T00:00:00Z").decision
             == "cleared"
         )
 
@@ -185,9 +170,7 @@ class TestReferenceDataFile:
 
     def test_a_new_currency_is_one_line_in_the_file(self, tmp_path: Path) -> None:
         path = tmp_path / "ref.json"
-        path.write_text(
-            '{"currencies": {"RWF": 0, "JOD": 3}, "callingCodes": {"250": "RW"}}'
-        )
+        path.write_text('{"currencies": {"RWF": 0, "JOD": 3}, "callingCodes": {"250": "RW"}}')
         assert load_reference_data(path).currencies["JOD"] == 3
 
     @pytest.mark.parametrize(
@@ -223,21 +206,14 @@ class TestNewSettings:
     @pytest.mark.parametrize(
         ("skew", "ok"), [(0, True), (86400, True), (-1, False), (86401, False)]
     )
-    def test_skew_bounds(
-        self, make_settings: Callable[..., Any], skew: int, ok: bool
-    ) -> None:
+    def test_skew_bounds(self, make_settings: Callable[..., Any], skew: int, ok: bool) -> None:
         if ok:
-            assert (
-                make_settings(max_future_skew_seconds=skew).max_future_skew_seconds
-                == skew
-            )
+            assert make_settings(max_future_skew_seconds=skew).max_future_skew_seconds == skew
         else:
             with pytest.raises(ValidationError):
                 make_settings(max_future_skew_seconds=skew)
 
     @pytest.mark.parametrize("prefix", ["a b", "gb/x", "gb:1", "é"])
-    def test_bad_prefix_is_refused(
-        self, make_settings: Callable[..., Any], prefix: str
-    ) -> None:
+    def test_bad_prefix_is_refused(self, make_settings: Callable[..., Any], prefix: str) -> None:
         with pytest.raises(ValidationError):
             make_settings(transaction_id_prefix=prefix)

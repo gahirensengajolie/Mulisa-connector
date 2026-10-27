@@ -8,9 +8,7 @@ from tests.conftest import make_payment
 
 
 def test_a_good_payment_parses_and_normalises_the_timestamp() -> None:
-    payment = PaymentIn.model_validate(
-        make_payment(createdAt="2026-10-14T18:40:00+02:00")
-    )
+    payment = PaymentIn.model_validate(make_payment(createdAt="2026-10-14T18:40:00+02:00"))
     assert payment.created_at.utcoffset() is not None
     assert (
         payment.created_at.timestamp()

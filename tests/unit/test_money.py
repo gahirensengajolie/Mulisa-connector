@@ -12,9 +12,7 @@ def test_rwf_has_no_minor_units_and_kes_has_two() -> None:
 
 
 def test_no_float_rounding_surprises() -> None:
-    assert (
-        to_minor_units("19.99", "USD") == 1999
-    )  # 19.99 * 100 == 1998.9999999999998 as a float
+    assert to_minor_units("19.99", "USD") == 1999  # 19.99 * 100 == 1998.9999999999998 as a float
     assert to_minor_units("1.15", "USD") == 115
 
 

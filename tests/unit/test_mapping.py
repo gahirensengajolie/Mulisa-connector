@@ -37,9 +37,7 @@ def test_unknown_calling_code_leaves_the_country_out_instead_of_guessing() -> No
     assert country_from_msisdn("99912345678") is None
     assert country_from_msisdn("27821234567") == "ZA"  # a 2-digit calling code
     payment = PaymentIn.model_validate(
-        make_payment(
-            creditor={"msisdn": "99912345678", "name": "X Y", "provider": "bluemobile"}
-        )
+        make_payment(creditor={"msisdn": "99912345678", "name": "X Y", "provider": "bluemobile"})
     )
     body = build_mulisa_request(payment, 1000, **BANK).model_dump(exclude_none=True)
     assert "country_to" not in body["transaction"]
