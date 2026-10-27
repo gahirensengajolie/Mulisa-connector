@@ -22,9 +22,7 @@ class ScreenResponse(BaseModel):
     screening_id: str | None = None
     risk_score: float | None = None
     matched_rules: list[str] = []
-    policy_applied: Literal["fail_open", "fail_closed"] | None = (
-        None  # only when unavailable
-    )
+    policy_applied: Literal["fail_open", "fail_closed"] | None = None  # only when unavailable
     reason: Reason | None = None  # only when unavailable
     replayed: bool
     attempts: int

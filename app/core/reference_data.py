@@ -10,9 +10,7 @@ DEFAULT_PATH = Path(__file__).resolve().parents[2] / "config" / "reference-data.
 
 
 class ReferenceData:
-    def __init__(
-        self, currencies: dict[str, int], calling_codes: dict[str, str]
-    ) -> None:
+    def __init__(self, currencies: dict[str, int], calling_codes: dict[str, str]) -> None:
         self.currencies = currencies
         self.calling_codes = calling_codes
 
@@ -23,9 +21,7 @@ def load_reference_data(path: Path = DEFAULT_PATH) -> ReferenceData:
         currencies = {str(k): v for k, v in raw["currencies"].items()}
         calling_codes = {str(k): v for k, v in raw["callingCodes"].items()}
     except (OSError, ValueError, KeyError, AttributeError) as exc:
-        raise ValueError(
-            f"reference data file {path} is missing or unreadable"
-        ) from exc
+        raise ValueError(f"reference data file {path} is missing or unreadable") from exc
 
     for code, exponent in currencies.items():
         if (
@@ -35,9 +31,7 @@ def load_reference_data(path: Path = DEFAULT_PATH) -> ReferenceData:
         ):
             raise ValueError(f"reference data: bad currency entry '{code}'")
     for prefix, country in calling_codes.items():
-        if not re.fullmatch(r"[0-9]{1,3}", prefix) or not re.fullmatch(
-            r"[A-Z]{2}", str(country)
-        ):
+        if not re.fullmatch(r"[0-9]{1,3}", prefix) or not re.fullmatch(r"[A-Z]{2}", str(country)):
             raise ValueError(f"reference data: bad calling code entry '{prefix}'")
     return ReferenceData(currencies, calling_codes)
 

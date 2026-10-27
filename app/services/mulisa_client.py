@@ -28,9 +28,7 @@ _MAX_RESPONSE_BYTES = 1024 * 1024
 
 TIMEOUT = "timeout"
 UPSTREAM_ERROR = "upstream_error"  # 5xx
-UPSTREAM_REJECTED = (
-    "upstream_rejected"  # 4xx: Mulisa refused OUR request (bad key, bad mapping)
-)
+UPSTREAM_REJECTED = "upstream_rejected"  # 4xx: Mulisa refused OUR request (bad key, bad mapping)
 UPSTREAM_UNREACHABLE = "upstream_unreachable"  # connection refused / DNS / reset
 UPSTREAM_BAD_RESPONSE = "upstream_bad_response"  # 200 but not a decision we understand
 
@@ -77,9 +75,7 @@ class MulisaClient:
         self._retry_delay = retry_delay
         self._sleep = sleep
 
-    def screen(
-        self, request: MulisaScreenRequest, request_id: str
-    ) -> Decided | Unavailable:
+    def screen(self, request: MulisaScreenRequest, request_id: str) -> Decided | Unavailable:
         payload = request.model_dump_json(exclude_none=True).encode()  # encoded ONCE
         last = _Attempt()
         for attempt_no in (1, 2):  # the first try plus at most one retry
@@ -97,12 +93,8 @@ class MulisaClient:
             if attempt_no == 1 and last.retryable:
                 self._sleep(self._retry_delay)
                 continue
-            return Unavailable(
-                reason=last.reason or UPSTREAM_ERROR, attempts=attempt_no
-            )
-        return Unavailable(
-            reason=last.reason or UPSTREAM_ERROR, attempts=2
-        )  # pragma: no cover
+            return Unavailable(reason=last.reason or UPSTREAM_ERROR, attempts=attempt_no)
+        return Unavailable(reason=last.reason or UPSTREAM_ERROR, attempts=2)  # pragma: no cover
 
     def _call_once(self, payload: bytes, request_id: str) -> _Attempt:
         http_request = urllib.request.Request(  # URL scheme is validated in Settings
@@ -145,9 +137,7 @@ class MulisaClient:
         envelope = body.get("error") if isinstance(body, dict) else None
         if not isinstance(envelope, dict):
             envelope = body if isinstance(body, dict) else {}
-        retryable = (
-            envelope.get("retryable") is True
-        )  # only an explicit JSON true counts
+        retryable = envelope.get("retryable") is True  # only an explicit JSON true counts
         reason = UPSTREAM_REJECTED if 400 <= status < 500 else UPSTREAM_ERROR
         return _Attempt(reason=reason, retryable=retryable, http_status=status)
 

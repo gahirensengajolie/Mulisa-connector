@@ -26,9 +26,7 @@ from app.services.mulisa_client import Decided, Unavailable
 
 
 class Screener(Protocol):
-    def screen(
-        self, request: MulisaScreenRequest, request_id: str
-    ) -> Decided | Unavailable: ...
+    def screen(self, request: MulisaScreenRequest, request_id: str) -> Decided | Unavailable: ...
 
 
 class ReferenceLocks:
@@ -103,9 +101,7 @@ class ScreeningService:
         self._max_future_skew = timedelta(seconds=max_future_skew_seconds)
         self._clock = clock
 
-    def screen(
-        self, payment: PaymentIn, *, request_id: str, caller: str
-    ) -> ScreenResponse:
+    def screen(self, payment: PaymentIn, *, request_id: str, caller: str) -> ScreenResponse:
         try:
             amount_minor = to_minor_units(payment.amount, payment.currency)
         except MoneyError as exc:
@@ -158,9 +154,7 @@ class ScreeningService:
                 return ScreenResponse(
                     reference=payment.reference,
                     decision="unavailable",
-                    recommended_action=(
-                        "release" if self._policy == "fail_open" else "hold"
-                    ),
+                    recommended_action=("release" if self._policy == "fail_open" else "hold"),
                     policy_applied=self._policy,  # type: ignore[arg-type]
                     reason=outcome.reason,  # type: ignore[arg-type]
                     replayed=False,
@@ -177,16 +171,12 @@ class ScreeningService:
                 recommended_action="release" if result.status == "cleared" else "hold",
                 screening_id=result.screening_id,
                 risk_score=result.risk_score,
-                matched_rules=[
-                    r.rule_id for r in result.rule_results if r.matched and r.rule_id
-                ],
+                matched_rules=[r.rule_id for r in result.rule_results if r.matched and r.rule_id],
                 attempts=outcome.attempts,
             )
             try:
                 self._repo.add(record)
-            except (
-                RecordAlreadyExists
-            ):  # another PROCESS won the race: the DB unique key caught it
+            except RecordAlreadyExists:  # another PROCESS won the race: the DB unique key caught it
                 existing = self._repo.get_by_reference(payment.reference)
                 if existing is None:  # pragma: no cover
                     raise
@@ -198,9 +188,7 @@ class ScreeningService:
             )  # fmt: skip
             return self._to_response(record, replayed=False, request_id=request_id)
 
-    def _replay(
-        self, record: ScreeningRecord, digest: str, request_id: str
-    ) -> ScreenResponse:
+    def _replay(self, record: ScreeningRecord, digest: str, request_id: str) -> ScreenResponse:
         if record.payload_hash != digest:
             raise ReferenceConflict
         log_event(
@@ -210,9 +198,7 @@ class ScreeningService:
         return self._to_response(record, replayed=True, request_id=request_id)
 
     @staticmethod
-    def _to_response(
-        record: ScreeningRecord, *, replayed: bool, request_id: str
-    ) -> ScreenResponse:
+    def _to_response(record: ScreeningRecord, *, replayed: bool, request_id: str) -> ScreenResponse:
         return ScreenResponse(
             reference=record.reference,
             decision=record.decision,  # type: ignore[arg-type]

@@ -26,9 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except ValidationError as exc:
             # Name the settings that are wrong, never their values (they may be keys).
             wrong = ", ".join(
-                sorted(
-                    {str(err["loc"][0]).upper() for err in exc.errors() if err["loc"]}
-                )
+                sorted({str(err["loc"][0]).upper() for err in exc.errors() if err["loc"]})
             )
             raise SystemExit(
                 f"Configuration error: check {wrong} (see .env.example and the README)"

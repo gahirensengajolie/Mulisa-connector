@@ -28,9 +28,7 @@ def to_minor_units(amount: str, currency: str) -> int:
     """Convert a decimal string to integer minor units, or raise MoneyError."""
     exponent = CURRENCY_EXPONENT.get(currency)
     if exponent is None:
-        raise MoneyError(
-            "currency", "unsupported_currency", "currency is not supported"
-        )
+        raise MoneyError("currency", "unsupported_currency", "currency is not supported")
     if not _DECIMAL_RE.match(amount):
         raise MoneyError(
             "amount",
@@ -47,9 +45,7 @@ def to_minor_units(amount: str, currency: str) -> int:
         )
     minor = int(scaled)
     if minor <= 0:
-        raise MoneyError(
-            "amount", "amount_not_positive", "amount must be greater than zero"
-        )
+        raise MoneyError("amount", "amount_not_positive", "amount must be greater than zero")
     if minor > MAX_MINOR_UNITS:
         raise MoneyError("amount", "amount_too_large", "amount is too large")
     return minor

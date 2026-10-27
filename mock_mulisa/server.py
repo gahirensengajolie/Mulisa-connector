@@ -48,12 +48,8 @@ class State:
             self.delay = float(os.environ.get("MOCK_DELAY_SECONDS", "1.0"))
             self.results: dict = {}  # transaction.id -> response (idempotency)
             self.processed = 0  # distinct screenings actually performed
-            self.received: list = (
-                []
-            )  # transaction.id of EVERY request received, in order
-            self.bodies: list = (
-                []
-            )  # the full request bodies, so tests can inspect what was sent
+            self.received: list = []  # transaction.id of EVERY request received, in order
+            self.bodies: list = []  # the full request bodies, so tests can inspect what was sent
             self.attempts: dict = {}  # transaction.id -> number of requests seen
 
 
@@ -87,9 +83,7 @@ def _validate(body) -> list:
             problems.append("transaction.id is required")
         amount = tx.get("amount")
         if isinstance(amount, bool) or not isinstance(amount, int) or amount <= 0:
-            problems.append(
-                "transaction.amount must be a positive integer (minor units)"
-            )
+            problems.append("transaction.amount must be a positive integer (minor units)")
         if not isinstance(tx.get("currency"), str) or len(tx["currency"]) != 3:
             problems.append("transaction.currency must be a 3-letter code")
         if not isinstance(tx.get("timestamp"), str):
@@ -196,9 +190,7 @@ def make_handler(state: State, api_key: str):
                 body = self._read_json() or {}
                 mode = body.get("mode", "normal")
                 if mode not in MODES:
-                    return self._json(
-                        400, {"error": f"mode must be one of {list(MODES)}"}
-                    )
+                    return self._json(400, {"error": f"mode must be one of {list(MODES)}"})
                 with state.lock:
                     state.mode = mode
                     if "delay" in body:
@@ -208,9 +200,7 @@ def make_handler(state: State, api_key: str):
                 state.reset()
                 return self._json(200, {"ok": True})
             if self.path != "/api/screen":
-                return self._json(
-                    404, _envelope("not_found", "no such endpoint", False)
-                )
+                return self._json(404, _envelope("not_found", "no such endpoint", False))
 
             if not self._authorised():
                 return self._json(
@@ -233,28 +223,18 @@ def make_handler(state: State, api_key: str):
                 mode, delay = state.mode, state.delay
 
             if mode == "error_503" or (mode == "error_503_once" and attempt_no == 1):
-                return self._json(
-                    503, _envelope("service_unavailable", "screening is busy", True)
-                )
+                return self._json(503, _envelope("service_unavailable", "screening is busy", True))
             if mode == "error_500":
-                return self._json(
-                    500, _envelope("internal_error", "unexpected failure", False)
-                )
+                return self._json(500, _envelope("internal_error", "unexpected failure", False))
             if mode == "error_400":
                 return self._json(
                     400,
-                    _envelope(
-                        "validation_error", "invalid request", False, ["simulated"]
-                    ),
+                    _envelope("validation_error", "invalid request", False, ["simulated"]),
                 )
             if mode == "slow" or (mode == "flaky_once" and attempt_no == 1):
-                time.sleep(
-                    delay
-                )  # the work still completes below, like a real slow service
+                time.sleep(delay)  # the work still completes below, like a real slow service
 
-            with (
-                state.lock
-            ):  # idempotent: the first result for an id is the only one ever produced
+            with state.lock:  # idempotent: the first result for an id is the only one ever produced
                 if txn_id not in state.results:
                     state.results[txn_id] = _decide(body)
                     state.processed += 1

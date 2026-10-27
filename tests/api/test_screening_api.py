@@ -15,9 +15,7 @@ Payment = Callable[..., dict[str, Any]]
 
 
 class TestHappyPaths:
-    def test_cleared_payment_is_released(
-        self, client: TestClient, payment: Payment
-    ) -> None:
+    def test_cleared_payment_is_released(self, client: TestClient, payment: Payment) -> None:
         response = client.post("/payments/screen", json=payment())
         body = response.json()
         assert response.status_code == 200
@@ -36,18 +34,14 @@ class TestHappyPaths:
         assert body["recommended_action"] == "hold"
         assert body["matched_rules"] == ["high-value-transfer"]
 
-    def test_blacklisted_creditor_is_flagged(
-        self, client: TestClient, payment: Payment
-    ) -> None:
+    def test_blacklisted_creditor_is_flagged(self, client: TestClient, payment: Payment) -> None:
         creditor = {
             "msisdn": "250722000999",
             "name": "Test Blacklisted",
             "provider": "bluemobile",
         }
         assert (
-            client.post("/payments/screen", json=payment(creditor=creditor)).json()[
-                "decision"
-            ]
+            client.post("/payments/screen", json=payment(creditor=creditor)).json()["decision"]
             == "flagged"
         )
 
@@ -102,9 +96,7 @@ class TestMalformedInput:
         del body["amount"]
         assert client.post("/payments/screen", json=body).status_code == 422
 
-    def test_errors_never_echo_the_values(
-        self, client: TestClient, payment: Payment
-    ) -> None:
+    def test_errors_never_echo_the_values(self, client: TestClient, payment: Payment) -> None:
         debtor = {
             "msisdn": "not-a-number",
             "name": "Zed Secretname",
@@ -114,9 +106,7 @@ class TestMalformedInput:
         assert "Zed Secretname" not in text
         assert "not-a-number" not in text
 
-    def test_invalid_json_is_400_without_a_stack_trace(
-        self, client: TestClient
-    ) -> None:
+    def test_invalid_json_is_400_without_a_stack_trace(self, client: TestClient) -> None:
         response = client.post(
             "/payments/screen",
             content="{not json",
@@ -155,9 +145,7 @@ class TestAuthentication:
         )
         assert response.status_code == 200
 
-    def test_health_is_open_and_unknown_paths_are_json_errors(
-        self, client: TestClient
-    ) -> None:
+    def test_health_is_open_and_unknown_paths_are_json_errors(self, client: TestClient) -> None:
         fresh = TestClient(client.app)
         assert fresh.get("/health").json() == {"status": "ok"}
         missing = fresh.get("/nope")
@@ -202,13 +190,9 @@ class TestDuplicates:
         self, client: TestClient, mulisa: MockMulisa, payment: Payment
     ) -> None:
         sent = payment()
-        mulisa.set_mode(
-            "slow", 0.1
-        )  # keep the first one running while the others arrive
+        mulisa.set_mode("slow", 0.1)  # keep the first one running while the others arrive
         with ThreadPoolExecutor(4) as pool:
-            results = list(
-                pool.map(lambda _: client.post("/payments/screen", json=sent), range(4))
-            )
+            results = list(pool.map(lambda _: client.post("/payments/screen", json=sent), range(4)))
         assert len(mulisa.state.received) == 1
         assert all(r.json()["decision"] == "cleared" for r in results)
         assert sum(1 for r in results if not r.json()["replayed"]) == 1
@@ -222,12 +206,8 @@ class TestDuplicates:
         sent = payment()
         settings = make_settings()
         headers = {"X-Api-Key": CONNECTOR_KEY}
-        TestClient(create_app(settings), headers=headers).post(
-            "/payments/screen", json=sent
-        )
-        restarted = TestClient(
-            create_app(settings), headers=headers
-        )  # same database file
+        TestClient(create_app(settings), headers=headers).post("/payments/screen", json=sent)
+        restarted = TestClient(create_app(settings), headers=headers)  # same database file
         again = restarted.post("/payments/screen", json=sent).json()
         assert again["replayed"] is True
         assert len(mulisa.state.received) == 1
@@ -310,10 +290,7 @@ class TestTimeoutsAndRetries:
     ) -> None:
         sent = payment()
         mulisa.set_mode("error_500")
-        assert (
-            client.post("/payments/screen", json=sent).json()["decision"]
-            == "unavailable"
-        )
+        assert client.post("/payments/screen", json=sent).json()["decision"] == "unavailable"
         mulisa.set_mode("normal")
         again = client.post("/payments/screen", json=sent).json()
         assert (again["decision"], again["replayed"]) == ("cleared", False)

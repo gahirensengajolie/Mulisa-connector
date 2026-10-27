@@ -55,9 +55,7 @@ def error_response(
 
 async def _api_error(request: Request, exc: Exception) -> JSONResponse:
     error = cast(ApiError, exc)
-    return error_response(
-        request, error.status_code, error.code, error.message, error.details
-    )
+    return error_response(request, error.status_code, error.code, error.message, error.details)
 
 
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
@@ -81,9 +79,7 @@ async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
 async def _http_error(request: Request, exc: Exception) -> JSONResponse:
     status = cast(StarletteHTTPException, exc).status_code
     codes = {404: "not_found", 405: "method_not_allowed"}
-    return error_response(
-        request, status, codes.get(status, "http_error"), "request refused"
-    )
+    return error_response(request, status, codes.get(status, "http_error"), "request refused")
 
 
 async def _unexpected(request: Request, exc: Exception) -> JSONResponse:

@@ -41,9 +41,7 @@ def build_mulisa_request(
             currency=payment.currency,
             type=transaction_type,  # assumption: the bank message has no type (setting)
             channel=channel,  # setting: the core system calls over an API
-            timestamp=payment.created_at.astimezone(timezone.utc).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            ),
+            timestamp=payment.created_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             reference=payment.reference,
             country_from=bank_country,
             country_to=receiver_country,

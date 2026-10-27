@@ -18,28 +18,20 @@ class TestFlagThresholdBoundary:
         self, client: TestClient, payment: Payment
     ) -> None:
         assert (
-            client.post("/payments/screen", json=payment(amount="1000000")).json()[
-                "decision"
-            ]
+            client.post("/payments/screen", json=payment(amount="1000000")).json()["decision"]
             == "cleared"
         )
 
-    def test_one_unit_above_is_flagged(
-        self, client: TestClient, payment: Payment
-    ) -> None:
+    def test_one_unit_above_is_flagged(self, client: TestClient, payment: Payment) -> None:
         assert (
-            client.post("/payments/screen", json=payment(amount="1000001")).json()[
-                "decision"
-            ]
+            client.post("/payments/screen", json=payment(amount="1000001")).json()["decision"]
             == "flagged"
         )
 
     def test_kes_is_converted_to_minor_units_before_screening(
         self, client: TestClient, payment: Payment
     ) -> None:
-        at = client.post(
-            "/payments/screen", json=payment(amount="10000.00", currency="KES")
-        ).json()
+        at = client.post("/payments/screen", json=payment(amount="10000.00", currency="KES")).json()
         above = client.post(
             "/payments/screen", json=payment(amount="10000.01", currency="KES")
         ).json()
@@ -54,9 +46,7 @@ class TestBankPrefixOnTransactionId:
         client.post("/payments/screen", json=sent)
         tx = mulisa.state.bodies[0]["transaction"]
         assert tx["id"] == f"greenbank-{sent['reference']}"
-        assert (
-            tx["reference"] == sent["reference"]
-        )  # the bank's own reference is still sent as-is
+        assert tx["reference"] == sent["reference"]  # the bank's own reference is still sent as-is
 
     def test_prefix_and_type_and_channel_come_from_settings(
         self,
@@ -84,9 +74,7 @@ class TestFutureDates:
     def test_a_payment_dated_2099_is_refused_and_never_reaches_mulisa(
         self, client: TestClient, mulisa: MockMulisa, payment: Payment
     ) -> None:
-        response = client.post(
-            "/payments/screen", json=payment(createdAt="2099-01-01T00:00:00Z")
-        )
+        response = client.post("/payments/screen", json=payment(createdAt="2099-01-01T00:00:00Z"))
         assert response.status_code == 422
         assert response.json()["error"]["details"][0]["code"] == "timestamp_in_future"
         assert mulisa.state.received == []
