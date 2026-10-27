@@ -14,14 +14,23 @@ from pydantic import (
 
 # strict=True: no silent coercion (a JSON number is never accepted where a string is required).
 Reference = Annotated[StrictStr, StringConstraints(pattern=r"^[A-Za-z0-9._:-]{1,64}$")]
-Msisdn = Annotated[StrictStr, StringConstraints(pattern=r"^[0-9]{8,15}$")]  # digits only, no "+"
+Msisdn = Annotated[
+    StrictStr, StringConstraints(pattern=r"^[0-9]{8,15}$")
+]  # digits only, no "+"
 Currency = Annotated[StrictStr, StringConstraints(pattern=r"^[A-Z]{3}$")]
 Name = Annotated[
     StrictStr,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=100, pattern=r"^[^\x00-\x1f\x7f]+$"),
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=100,
+        pattern=r"^[^\x00-\x1f\x7f]+$",
+    ),
 ]
 Wallet = Annotated[StrictStr, StringConstraints(pattern=r"^[A-Za-z0-9._-]{1,32}$")]
-Provider = Annotated[StrictStr, StringConstraints(pattern=r"^[a-z0-9][a-z0-9._-]{0,31}$")]
+Provider = Annotated[
+    StrictStr, StringConstraints(pattern=r"^[a-z0-9][a-z0-9._-]{0,31}$")
+]
 
 
 class Debtor(BaseModel):
@@ -52,6 +61,8 @@ class PaymentIn(BaseModel):
     @field_validator("created_at", mode="before")
     @classmethod
     def _timestamp_must_be_text(cls, value: Any) -> Any:
-        if not isinstance(value, str):  # pydantic would also accept a unix timestamp number
+        if not isinstance(
+            value, str
+        ):  # pydantic would also accept a unix timestamp number
             raise ValueError("must be an ISO 8601 timestamp string with a time zone")
         return value

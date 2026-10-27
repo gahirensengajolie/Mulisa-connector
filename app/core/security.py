@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+from typing import Annotated
 
 from fastapi import Depends, Request
 
@@ -14,7 +15,9 @@ def get_settings_dep(request: Request) -> Settings:
     return settings
 
 
-def require_api_key(request: Request, settings: Settings = Depends(get_settings_dep)) -> str:
+def require_api_key(
+    request: Request, settings: Annotated[Settings, Depends(get_settings_dep)]
+) -> str:
     """Returns the calling system's name. Compares hashes in constant time against EVERY key
     (no early exit), so timing reveals nothing about which key was close."""
     provided = request.headers.get("x-api-key", "")

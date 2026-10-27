@@ -16,7 +16,9 @@ class ScreeningRepository:
         self._session = session
 
     def get_by_reference(self, reference: str) -> ScreeningRecord | None:
-        statement = select(ScreeningRecord).where(ScreeningRecord.reference == reference)
+        statement = select(ScreeningRecord).where(
+            ScreeningRecord.reference == reference
+        )
         return self._session.execute(statement).scalar_one_or_none()
 
     def add(self, record: ScreeningRecord) -> ScreeningRecord:

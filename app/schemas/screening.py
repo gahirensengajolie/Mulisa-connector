@@ -1,29 +1,48 @@
-# app/schemas/screening.py
-from pydantic import BaseModel, Field
-from datetime import datetime
-from typing import Optional
+"""Schemas for what we send BACK to the core system."""
 
-# 1. Incoming Greenbank Format
-class DebtorSchema(BaseModel):
-    msisdn: str
-    name: str
-    wallet: str
+from typing import Literal
 
-class CreditorSchema(BaseModel):
-    msisdn: str
-    name: str
-    provider: str
+from pydantic import BaseModel
 
-class GreenbankPaymentInput(BaseModel):
+Decision = Literal["cleared", "flagged", "unavailable"]
+Action = Literal["release", "hold"]
+Reason = Literal[
+    "timeout",
+    "upstream_error",
+    "upstream_rejected",
+    "upstream_unreachable",
+    "upstream_bad_response",
+]
+
+
+class ScreenResponse(BaseModel):
     reference: str
-    amount: str  # Kept as string to prevent float precision loss
-    currency: str
-    debtor: DebtorSchema
-    creditor: CreditorSchema
-    createdAt: datetime
+    decision: Decision
+    recommended_action: Action
+    screening_id: str | None = None
+    risk_score: float | None = None
+    matched_rules: list[str] = []
+    policy_applied: Literal["fail_open", "fail_closed"] | None = (
+        None  # only when unavailable
+    )
+    reason: Reason | None = None  # only when unavailable
+    replayed: bool
+    attempts: int
+    request_id: str
 
-# 2. Normalized Output Response
-class ScreeningDecisionResponse(BaseModel):
-    reference: str
-    decision: str  # "cleared", "flagged", or "unavailable"
-    policy_applied: Optional[str] = None
+
+class ErrorDetail(BaseModel):
+    field: str
+    code: str
+    message: str
+
+
+class ErrorBody(BaseModel):
+    code: str
+    message: str
+    request_id: str
+    details: list[ErrorDetail] | None = None
+
+
+class ErrorEnvelope(BaseModel):
+    error: ErrorBody

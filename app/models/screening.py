@@ -13,6 +13,7 @@ class ScreeningRecord(Base):
     __tablename__ = "screening_records"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # UNIQUE: even across processes the database refuses a second row for the same reference.
     reference: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     payload_hash: Mapped[str] = mapped_column(String(64))
     decision: Mapped[str] = mapped_column(String(16))

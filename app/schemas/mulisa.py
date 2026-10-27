@@ -41,7 +41,8 @@ class MulisaRuleResult(BaseModel):
 
 class MulisaScreenResponse(BaseModel):
     """Only what we use. `status` is a Literal: anything but cleared/flagged fails validation,
-    and a response that fails validation is treated as 'unavailable', never as 'cleared'."""
+    and a response that fails validation is treated as 'unavailable', never as 'cleared'.
+    """
 
     model_config = ConfigDict(extra="ignore")
 

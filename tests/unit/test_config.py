@@ -17,7 +17,9 @@ def make(**over: Any) -> Settings:
     return Settings(_env_file=None, **{**BASE, **over})
 
 
-def test_the_policy_is_required_and_has_no_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_policy_is_required_and_has_no_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("SCREENING_UNAVAILABLE_POLICY", raising=False)
     assert make().screening_unavailable_policy == "fail_closed"
     values = {k: v for k, v in BASE.items() if k != "screening_unavailable_policy"}
@@ -38,16 +40,21 @@ def test_an_unknown_policy_is_refused(bad: str) -> None:
         {"connector_api_keys": "core=short"},
         {"connector_api_keys": "a=abcdefghijklmnopqrstuv,b=abcdefghijklmnopqrstuv"},
         {"mulisa_api_key": "CHANGE_ME_mulisa_key"},
-        {"mulisa_url": "http://mulisa.example.com"}, 
+        {"mulisa_url": "http://mulisa.example.com"},  # cleartext to a remote host
         {"mulisa_timeout_seconds": 0},
     ],
 )
-def test_placeholders_short_keys_and_cleartext_remote_urls_are_refused(over: dict[str, Any]) -> None:
+def test_placeholders_short_keys_and_cleartext_remote_urls_are_refused(
+    over: dict[str, Any],
+) -> None:
     with pytest.raises(ValidationError):
         make(**over)
 
 
 def test_https_is_accepted_and_keys_are_parsed_per_caller() -> None:
-    settings = make(mulisa_url="https://mulisa.example.com/", connector_api_keys="a=abcdefghijklmnop,b=qrstuvwxyz012345")
+    settings = make(
+        mulisa_url="https://mulisa.example.com/",
+        connector_api_keys="a=abcdefghijklmnop,b=qrstuvwxyz012345",
+    )
     assert settings.mulisa_url == "https://mulisa.example.com"
     assert list(settings.api_keys) == ["a", "b"]

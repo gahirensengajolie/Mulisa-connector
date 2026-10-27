@@ -14,14 +14,14 @@ class Base(DeclarativeBase):
 def make_engine(url: str) -> Engine:
     if not url.startswith("sqlite"):
         return create_engine(url, pool_pre_ping=True)
-
+    # SQLite: requests run in a thread pool, so allow the connection to cross threads.
     kwargs: dict[str, object] = {"connect_args": {"check_same_thread": False}}
     if url.endswith(":memory:"):
         kwargs["poolclass"] = StaticPool
     elif url.startswith("sqlite:///"):
         Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
-    return create_engine(url, **kwargs)  
+    return create_engine(url, **kwargs)
+
 
 def make_session_factory(engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(bind=engine, expire_on_commit=False)
-

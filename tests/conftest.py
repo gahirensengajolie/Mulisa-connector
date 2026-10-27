@@ -26,8 +26,16 @@ def make_payment(**overrides: Any) -> dict[str, Any]:
         "reference": f"GB-T-{next(_counter):06d}",
         "amount": "250000",
         "currency": "RWF",
-        "debtor": {"msisdn": "250788000111", "name": "Aline Uwase", "wallet": "GB-0001"},
-        "creditor": {"msisdn": "250722000333", "name": "Eric Mugisha", "provider": "bluemobile"},
+        "debtor": {
+            "msisdn": "250788000111",
+            "name": "Aline Uwase",
+            "wallet": "GB-0001",
+        },
+        "creditor": {
+            "msisdn": "250722000333",
+            "name": "Eric Mugisha",
+            "provider": "bluemobile",
+        },
         "createdAt": "2026-10-14T16:40:00Z",
     }
     payment.update(overrides)

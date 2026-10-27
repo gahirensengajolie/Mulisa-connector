@@ -10,8 +10,10 @@ Behaviour
 Test helpers (not part of Mulisa): POST /__control, POST /__reset, GET /__stats.
 Run:  python -m mock_mulisa.server        (env: MOCK_PORT, MOCK_API_KEY, ...)
 """
+
 from __future__ import annotations
 
+import contextlib
 import hmac
 import json
 import os
@@ -46,8 +48,12 @@ class State:
             self.delay = float(os.environ.get("MOCK_DELAY_SECONDS", "1.0"))
             self.results: dict = {}  # transaction.id -> response (idempotency)
             self.processed = 0  # distinct screenings actually performed
-            self.received: list = []  # transaction.id of EVERY request received, in order
-            self.bodies: list = []  # the full request bodies, so tests can inspect what was sent
+            self.received: list = (
+                []
+            )  # transaction.id of EVERY request received, in order
+            self.bodies: list = (
+                []
+            )  # the full request bodies, so tests can inspect what was sent
             self.attempts: dict = {}  # transaction.id -> number of requests seen
 
 
@@ -69,7 +75,11 @@ def _validate(body) -> list:
     problems = []
     if not isinstance(body, dict):
         return ["body must be an object"]
-    tx, sender, receiver = body.get("transaction"), body.get("sender"), body.get("receiver")
+    tx, sender, receiver = (
+        body.get("transaction"),
+        body.get("sender"),
+        body.get("receiver"),
+    )
     if not isinstance(tx, dict):
         problems.append("transaction is required")
     else:
@@ -77,7 +87,9 @@ def _validate(body) -> list:
             problems.append("transaction.id is required")
         amount = tx.get("amount")
         if isinstance(amount, bool) or not isinstance(amount, int) or amount <= 0:
-            problems.append("transaction.amount must be a positive integer (minor units)")
+            problems.append(
+                "transaction.amount must be a positive integer (minor units)"
+            )
         if not isinstance(tx.get("currency"), str) or len(tx["currency"]) != 3:
             problems.append("transaction.currency must be a 3-letter code")
         if not isinstance(tx.get("timestamp"), str):
@@ -92,7 +104,8 @@ def _validate(body) -> list:
 
 def _decide(body: dict) -> dict:
     threshold = int(os.environ.get("MOCK_FLAG_THRESHOLD_MINOR", "1000000"))
-    blacklist = {item.strip() for item in os.environ.get("MOCK_BLACKLIST", "250722000999,GB-9999").split(",") if item.strip()}
+    raw_blacklist = os.environ.get("MOCK_BLACKLIST", "250722000999,GB-9999")
+    blacklist = {item.strip() for item in raw_blacklist.split(",") if item.strip()}
     tx, sender, receiver = body["transaction"], body["sender"], body["receiver"]
 
     hits = [acc for acc in (sender["account"], receiver["account"]) if acc in blacklist]
@@ -144,7 +157,8 @@ def make_handler(state: State, api_key: str):
                 self.end_headers()
                 self.wfile.write(data)
             except (BrokenPipeError, ConnectionResetError):
-                pass  
+                pass  # the client gave up (a timeout, on purpose). Nothing to do.
+
         def _read_json(self):
             length = int(self.headers.get("Content-Length", "0") or 0)
             try:
@@ -182,7 +196,9 @@ def make_handler(state: State, api_key: str):
                 body = self._read_json() or {}
                 mode = body.get("mode", "normal")
                 if mode not in MODES:
-                    return self._json(400, {"error": f"mode must be one of {list(MODES)}"})
+                    return self._json(
+                        400, {"error": f"mode must be one of {list(MODES)}"}
+                    )
                 with state.lock:
                     state.mode = mode
                     if "delay" in body:
@@ -192,14 +208,21 @@ def make_handler(state: State, api_key: str):
                 state.reset()
                 return self._json(200, {"ok": True})
             if self.path != "/api/screen":
-                return self._json(404, _envelope("not_found", "no such endpoint", False))
+                return self._json(
+                    404, _envelope("not_found", "no such endpoint", False)
+                )
 
             if not self._authorised():
-                return self._json(401, _envelope("unauthorized", "missing or invalid API key", False))
+                return self._json(
+                    401, _envelope("unauthorized", "missing or invalid API key", False)
+                )
             body = self._read_json()
             problems = _validate(body)
             if problems:
-                return self._json(400, _envelope("validation_error", "invalid request", False, problems))
+                return self._json(
+                    400,
+                    _envelope("validation_error", "invalid request", False, problems),
+                )
 
             txn_id = body["transaction"]["id"]
             with state.lock:
@@ -210,16 +233,28 @@ def make_handler(state: State, api_key: str):
                 mode, delay = state.mode, state.delay
 
             if mode == "error_503" or (mode == "error_503_once" and attempt_no == 1):
-                return self._json(503, _envelope("service_unavailable", "screening is busy", True))
+                return self._json(
+                    503, _envelope("service_unavailable", "screening is busy", True)
+                )
             if mode == "error_500":
-                return self._json(500, _envelope("internal_error", "unexpected failure", False))
+                return self._json(
+                    500, _envelope("internal_error", "unexpected failure", False)
+                )
             if mode == "error_400":
-                return self._json(400, _envelope("validation_error", "invalid request", False, ["simulated"]))
+                return self._json(
+                    400,
+                    _envelope(
+                        "validation_error", "invalid request", False, ["simulated"]
+                    ),
+                )
             if mode == "slow" or (mode == "flaky_once" and attempt_no == 1):
-                time.sleep(delay) 
+                time.sleep(
+                    delay
+                )  # the work still completes below, like a real slow service
 
-            # idempotent: the first result for an id is the only one ever produced
-            with state.lock:  
+            with (
+                state.lock
+            ):  # idempotent: the first result for an id is the only one ever produced
                 if txn_id not in state.results:
                     state.results[txn_id] = _decide(body)
                     state.processed += 1
@@ -241,9 +276,15 @@ def make_handler(state: State, api_key: str):
     return Handler
 
 
-def make_server(host: str = "127.0.0.1", port: int = 0, api_key: str = "mock-mulisa-key-000000") -> ThreadingHTTPServer:
+class MockServer(ThreadingHTTPServer):
+    state: State
+
+
+def make_server(
+    host: str = "127.0.0.1", port: int = 0, api_key: str = "mock-mulisa-key-000000"
+) -> MockServer:
     state = State()
-    server = ThreadingHTTPServer((host, port), make_handler(state, api_key))
+    server = MockServer((host, port), make_handler(state, api_key))
     server.daemon_threads = True
     server.state = state
     return server
@@ -253,11 +294,12 @@ def main() -> int:
     port = int(os.environ.get("MOCK_PORT", "9100"))
     api_key = os.environ.get("MOCK_API_KEY", "mock-mulisa-key-000000")
     server = make_server(port=port, api_key=api_key)
-    print(f"mock-mulisa listening on 127.0.0.1:{server.server_address[1]} mode={server.state.mode}", file=sys.stderr)
-    try:
+    print(
+        f"mock-mulisa listening on 127.0.0.1:{server.server_address[1]} mode={server.state.mode}",
+        file=sys.stderr,
+    )
+    with contextlib.suppress(KeyboardInterrupt):
         server.serve_forever()
-    except KeyboardInterrupt:
-        pass
     return 0
 
 

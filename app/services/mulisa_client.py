@@ -27,10 +27,13 @@ from app.schemas.mulisa import MulisaScreenRequest, MulisaScreenResponse
 _MAX_RESPONSE_BYTES = 1024 * 1024
 
 TIMEOUT = "timeout"
-UPSTREAM_ERROR = "upstream_error"  
-UPSTREAM_REJECTED = "upstream_rejected"  
-UPSTREAM_UNREACHABLE = "upstream_unreachable"  
-UPSTREAM_BAD_RESPONSE = "upstream_bad_response"
+UPSTREAM_ERROR = "upstream_error"  # 5xx
+UPSTREAM_REJECTED = (
+    "upstream_rejected"  # 4xx: Mulisa refused OUR request (bad key, bad mapping)
+)
+UPSTREAM_UNREACHABLE = "upstream_unreachable"  # connection refused / DNS / reset
+UPSTREAM_BAD_RESPONSE = "upstream_bad_response"  # 200 but not a decision we understand
+
 
 @dataclass(frozen=True)
 class Decided:
@@ -55,7 +58,7 @@ class _Attempt:
 def _read_json(raw: bytes) -> Any:
     try:
         return json.loads(raw.decode("utf-8"))
-    except ValueError:  
+    except ValueError:  # includes UnicodeDecodeError
         return None
 
 
@@ -74,10 +77,12 @@ class MulisaClient:
         self._retry_delay = retry_delay
         self._sleep = sleep
 
-    def screen(self, request: MulisaScreenRequest, request_id: str) -> Decided | Unavailable:
-        payload = request.model_dump_json(exclude_none=True).encode()  
+    def screen(
+        self, request: MulisaScreenRequest, request_id: str
+    ) -> Decided | Unavailable:
+        payload = request.model_dump_json(exclude_none=True).encode()  # encoded ONCE
         last = _Attempt()
-        for attempt_no in (1, 2):  
+        for attempt_no in (1, 2):  # the first try plus at most one retry
             last = self._call_once(payload, request_id)
             log_event(
                 "mulisa_attempt",
@@ -92,11 +97,15 @@ class MulisaClient:
             if attempt_no == 1 and last.retryable:
                 self._sleep(self._retry_delay)
                 continue
-            return Unavailable(reason=last.reason or UPSTREAM_ERROR, attempts=attempt_no)
-        return Unavailable(reason=last.reason or UPSTREAM_ERROR, attempts=2)  
+            return Unavailable(
+                reason=last.reason or UPSTREAM_ERROR, attempts=attempt_no
+            )
+        return Unavailable(
+            reason=last.reason or UPSTREAM_ERROR, attempts=2
+        )  # pragma: no cover
 
     def _call_once(self, payload: bytes, request_id: str) -> _Attempt:
-        http_request = urllib.request.Request(  
+        http_request = urllib.request.Request(  # URL scheme is validated in Settings
             self._url,
             data=payload,
             method="POST",
@@ -111,7 +120,7 @@ class MulisaClient:
             with _opener.open(http_request, timeout=self._timeout) as response:
                 raw = response.read(_MAX_RESPONSE_BYTES)
                 status = response.status
-        except urllib.error.HTTPError as exc:  
+        except urllib.error.HTTPError as exc:  # an HTTP answer with a 4xx/5xx status
             return self._from_error_status(exc.code, exc.read(_MAX_RESPONSE_BYTES))
         except TimeoutError:
             return _Attempt(reason=TIMEOUT, retryable=True)
@@ -125,16 +134,20 @@ class MulisaClient:
         try:
             result = MulisaScreenResponse.model_validate(_read_json(raw))
         except ValidationError:
+            # Fail safe: a decision we do not recognise is NOT treated as "cleared".
             return _Attempt(reason=UPSTREAM_BAD_RESPONSE, http_status=status)
         return _Attempt(result=result, http_status=status)
 
     @staticmethod
     def _from_error_status(status: int, raw: bytes) -> _Attempt:
         body = _read_json(raw)
+        # The envelope may be the whole body or nested under "error". Accept both.
         envelope = body.get("error") if isinstance(body, dict) else None
         if not isinstance(envelope, dict):
             envelope = body if isinstance(body, dict) else {}
-        retryable = envelope.get("retryable") is True
+        retryable = (
+            envelope.get("retryable") is True
+        )  # only an explicit JSON true counts
         reason = UPSTREAM_REJECTED if 400 <= status < 500 else UPSTREAM_ERROR
         return _Attempt(reason=reason, retryable=retryable, http_status=status)
 
@@ -142,7 +155,7 @@ class MulisaClient:
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     """Never follow a redirect: it could forward our API key to another host."""
 
-    def redirect_request(self, *args: Any, **kwargs: Any) -> None:  
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
         return None
 
 

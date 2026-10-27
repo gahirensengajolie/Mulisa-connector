@@ -6,7 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.db.session import Base, make_engine, make_session_factory
 from app.models.screening import ScreeningRecord
-from app.repositories.screening_repository import RecordAlreadyExists, ScreeningRepository
+from app.repositories.screening_repository import (
+    RecordAlreadyExists,
+    ScreeningRepository,
+)
 
 
 @pytest.fixture
@@ -34,7 +37,9 @@ def test_add_then_get_by_reference(session: Session) -> None:
     assert found.matched_rules == ["r1"]
 
 
-def test_the_database_refuses_a_second_row_for_the_same_reference(session: Session) -> None:
+def test_the_database_refuses_a_second_row_for_the_same_reference(
+    session: Session,
+) -> None:
     repo = ScreeningRepository(session)
     repo.add(_record())
     with pytest.raises(RecordAlreadyExists):

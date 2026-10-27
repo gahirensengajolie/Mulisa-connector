@@ -13,7 +13,11 @@ from app.core.log import log_event
 
 class ApiError(Exception):
     def __init__(
-        self, status_code: int, code: str, message: str, details: list[dict[str, Any]] | None = None
+        self,
+        status_code: int,
+        code: str,
+        message: str,
+        details: list[dict[str, Any]] | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -25,7 +29,9 @@ class ApiError(Exception):
 class ReferenceConflict(ApiError):
     def __init__(self) -> None:
         super().__init__(
-            409, "reference_conflict", "this reference was already used for a different payment"
+            409,
+            "reference_conflict",
+            "this reference was already used for a different payment",
         )
 
 
@@ -41,19 +47,24 @@ def error_response(
     if details:
         body["details"] = details
     return JSONResponse(
-        status_code=status_code, content={"error": body}, headers={"X-Request-Id": request_id}
+        status_code=status_code,
+        content={"error": body},
+        headers={"X-Request-Id": request_id},
     )
 
 
 async def _api_error(request: Request, exc: Exception) -> JSONResponse:
     error = cast(ApiError, exc)
-    return error_response(request, error.status_code, error.code, error.message, error.details)
+    return error_response(
+        request, error.status_code, error.code, error.message, error.details
+    )
 
 
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
     errors = cast(RequestValidationError, exc).errors()
     if any(err.get("type") == "json_invalid" for err in errors):
         return error_response(request, 400, "invalid_json", "body is not valid JSON")
+    # Field and rule only. err["input"] (the offending value) is deliberately dropped.
     details = [
         {
             "field": ".".join(str(part) for part in err["loc"][1:]) or "$",
@@ -70,10 +81,13 @@ async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
 async def _http_error(request: Request, exc: Exception) -> JSONResponse:
     status = cast(StarletteHTTPException, exc).status_code
     codes = {404: "not_found", 405: "method_not_allowed"}
-    return error_response(request, status, codes.get(status, "http_error"), "request refused")
+    return error_response(
+        request, status, codes.get(status, "http_error"), "request refused"
+    )
 
 
 async def _unexpected(request: Request, exc: Exception) -> JSONResponse:
+    # Log the error TYPE only: the message could contain customer data.
     log_event(
         "internal_error",
         request_id=getattr(request.state, "request_id", None),

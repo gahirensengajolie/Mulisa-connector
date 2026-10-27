@@ -1,0 +1,11 @@
+{
+  "_comment": "Currency minor-unit exponents (ISO 4217) and phone calling code -> ISO country. Edit this file to add a currency or a country; no code change needed.",
+  "currencies": {
+    "RWF": 0, "UGX": 0, "BIF": 0, "XOF": 0, "XAF": 0,
+    "KES": 2, "TZS": 2, "ETB": 2, "CDF": 2, "ZAR": 2, "USD": 2, "EUR": 2, "GBP": 2
+  },
+  "callingCodes": {
+    "250": "RW", "254": "KE", "255": "TZ", "256": "UG", "257": "BI",
+    "243": "CD", "251": "ET", "233": "GH", "234": "NG", "27": "ZA"
+  }
+}
