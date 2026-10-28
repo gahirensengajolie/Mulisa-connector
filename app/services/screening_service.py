@@ -1,4 +1,6 @@
-"""The screening flow: validate -> duplicate check -> map -> call Mulisa -> normalise -> apply policy.
+"""The screening flow.
+
+validate -> duplicate check -> map -> call Mulisa -> normalise -> apply policy.
 
 The service knows nothing about HTTP or FastAPI. It receives a repository and a client."""
 

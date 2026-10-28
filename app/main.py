@@ -10,8 +10,8 @@ from pydantic import ValidationError
 from app.core.config import Settings, get_settings
 from app.core.errors import error_response, register_error_handlers
 from app.core.log import configure_logging, log_event
-from app.db.session import Base, make_engine, make_session_factory
-from app.models import screening as _models  # noqa: F401  (registers the table on Base)
+from app.db.migrations import SchemaNotCurrent, assert_schema_current
+from app.db.session import make_engine, make_session_factory
 from app.routers import health, screening
 from app.services.mulisa_client import MulisaClient
 from app.services.screening_service import ReferenceLocks
@@ -34,7 +34,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging()
 
     engine = make_engine(settings.database_url)
-    Base.metadata.create_all(engine)  # a real deployment would use migrations (Alembic)
+    try:
+        assert_schema_current(engine)  # the schema is created by `alembic upgrade head`, not here
+    except SchemaNotCurrent as exc:
+        raise SystemExit(str(exc)) from None
 
     docs = settings.enable_api_docs
     app = FastAPI(

@@ -1,4 +1,6 @@
-"""HTTP layer for screening: parse, authenticate, delegate to the service. No business logic here."""
+"""HTTP layer for screening: parse, authenticate, delegate to the service.
+
+No business logic here."""
 
 from typing import Annotated
 

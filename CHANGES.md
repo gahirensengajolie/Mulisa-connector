@@ -29,3 +29,25 @@ Rules E, W, F, I, B, UP, SIM, RUF at line length 120, and `mypy --strict app`: n
 
 Formatting is left to `ruff format .` with your own settings. Do not also run `black`: the two formatters
 disagree and each run undoes the other.
+
+
+## Alembic migrations
+
+| Change | Where |
+|---|---|
+| First migration, generated from your model and then tidied (`screening_records` + UNIQUE index on `reference`) | `migrations/versions/0001_create_screening_records.py` |
+| Alembic environment: URL from `DATABASE_URL`, same engine rules as the app, SQLite batch mode, offline `--sql` mode | `migrations/env.py`, `alembic.ini` |
+| `create_all()` removed. Startup now checks the database is at the latest revision and exits with an instruction if not | `app/main.py`, `app/db/migrations.py` |
+| `get_database_url()`: migrations read only `DATABASE_URL`, not the whole `Settings` | `app/core/config.py` |
+| Test fixtures migrate the temp database exactly like production (`make_settings(migrate=False)` to opt out) | `tests/conftest.py` |
+| 18 new tests: schema, unique index, up/down/up, no drift between models and migrations, single head, env.py needs only `DATABASE_URL`, offline SQL, startup refuses an unmigrated or wrong-revision database | `tests/db/test_migrations.py` |
+| `alembic>=1.13` added to `requirements.txt` | `requirements.txt` |
+
+The scripts folder is called `migrations/`, not `alembic/`: a top-level folder named `alembic` makes ruff
+treat `import alembic` as your own code and report false import-order errors.
+
+## Formatting
+
+Your CI formats with `line-length = 100` (confirmed: at 100 exactly 14 files differ, as in your CI log).
+The whole project is now formatted at 100 and passes `ruff format --check`, `ruff check` and `mypy --strict app`.
+Formatting is identical under ruff 0.7.1 and the latest ruff, so local and CI agree.

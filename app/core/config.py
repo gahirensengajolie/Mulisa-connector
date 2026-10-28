@@ -9,6 +9,7 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+DEFAULT_DATABASE_URL = "sqlite:///data/connector.db"
 
 
 class Settings(BaseSettings):
@@ -26,7 +27,7 @@ class Settings(BaseSettings):
     mulisa_retry_delay_seconds: float = Field(default=0.2, ge=0, le=5)
     bank_institution_id: str = Field(default="greenbank", min_length=1, max_length=32)
     bank_country: str = Field(default="RW", pattern=r"^[A-Z]{2}$")
-    database_url: str = "sqlite:///data/connector.db"
+    database_url: str = DEFAULT_DATABASE_URL
 
     # Mulisa's transaction.id is unique across ALL banks: ours is "<prefix>-<reference>".
     transaction_id_prefix: str = Field(default="", max_length=32, pattern=r"^[A-Za-z0-9_-]*$")
@@ -86,6 +87,18 @@ def parse_api_keys(raw: str) -> dict[str, str]:
             raise ValueError("API keys must be unique per calling system")
         keys[name] = key
     return keys
+
+
+class _DatabaseOnly(BaseSettings):
+    """Reads ONLY database_url, so running migrations needs neither the policy nor any key."""
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    database_url: str = DEFAULT_DATABASE_URL
+
+
+def get_database_url() -> str:
+    return _DatabaseOnly().database_url
 
 
 @lru_cache

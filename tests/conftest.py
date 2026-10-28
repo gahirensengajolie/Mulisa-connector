@@ -1,4 +1,6 @@
-"""Shared fixtures: a real mock Mulisa on a random local port and the real app on a temp SQLite file."""
+"""Shared fixtures.
+
+A real mock Mulisa on a random local port and the real app on a temp SQLite file."""
 
 import itertools
 import threading
@@ -11,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
+from app.db.migrations import upgrade_to_head
 from app.main import create_app
 from mock_mulisa.server import make_server
 
@@ -83,7 +86,7 @@ def mulisa() -> Iterator[MockMulisa]:
 
 @pytest.fixture
 def make_settings(tmp_path: Path, mulisa: MockMulisa) -> Callable[..., Settings]:
-    def _make(**overrides: Any) -> Settings:
+    def _make(*, migrate: bool = True, **overrides: Any) -> Settings:
         values: dict[str, Any] = {
             "screening_unavailable_policy": "fail_closed",
             "connector_api_keys": f"core-banking={CONNECTOR_KEY}",
@@ -94,7 +97,10 @@ def make_settings(tmp_path: Path, mulisa: MockMulisa) -> Callable[..., Settings]
             "database_url": f"sqlite:///{tmp_path / 'test.db'}",
         }
         values.update(overrides)
-        return Settings(_env_file=None, **values)
+        settings = Settings(_env_file=None, **values)
+        if migrate:
+            upgrade_to_head(settings.database_url)  # same path as production: alembic
+        return settings
 
     return _make
 
